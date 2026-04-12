@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rowing Stroke Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(160deg, #0c2340 0%, #1a4a7a 50%, #0c2340 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Subtle animated water ripple behind the card */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 40% at 20% 60%, rgba(100,180,255,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 30% at 80% 30%, rgba(100,180,255,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 48px 44px 44px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    /* Water-line accent stripe at top of card */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      border-radius: 20px 20px 0 0;
+      background: linear-gradient(90deg, #1a6fa8, #4db6e8, #1a6fa8);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    /* Rowing boat SVG icon */
+    .logo-icon {
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .logo-icon svg {
+      width: 72px;
+      height: 48px;
+    }
+
+    .logo h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0c2340;
+      letter-spacing: -0.3px;
+    }
+
+    .logo p {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .date-badge {
+      background: #ebf5fb;
+      border: 1px solid #93c6e0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #1a4a7a;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 16px;
+      color: #111827;
+      background: #f9fafb;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      outline: none;
+      margin-bottom: 20px;
+    }
+
+    input:focus {
+      border-color: #1a6fa8;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(26, 111, 168, 0.12);
+    }
+
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #1a6fa8;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.2px;
+    }
+
+    button:hover  { background: #155a8a; }
+    button:active { transform: scale(0.98); }
+    button:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+
+    .message {
+      margin-top: 18px;
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      display: none;
+    }
+
+    .message.success {
+      background: #eff8ff;
+      border: 1px solid #93c6e0;
+      color: #0c3d5e;
+    }
+
+    .message.error {
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .config-notice {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: #92400e;
+      margin-bottom: 22px;
+      text-align: center;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <!-- Rowing boat + oars SVG -->
+      <div class="logo-icon">
+        <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Water waves -->
+          <path d="M0 58 Q15 52 30 58 Q45 64 60 58 Q75 52 90 58 Q105 64 120 58" stroke="#93c6e0" stroke-width="2" fill="none" opacity="0.6"/>
+          <path d="M0 66 Q15 60 30 66 Q45 72 60 66 Q75 60 90 66 Q105 72 120 66" stroke="#93c6e0" stroke-width="2" fill="none" opacity="0.4"/>
+          <!-- Boat hull -->
+          <path d="M20 54 Q60 68 100 54 L95 46 Q60 58 25 46 Z" fill="#1a4a7a"/>
+          <path d="M25 46 Q60 58 95 46 L90 40 Q60 52 30 40 Z" fill="#1a6fa8"/>
+          <!-- Boat interior / gunwale highlight -->
+          <path d="M30 40 Q60 50 90 40" stroke="#4db6e8" stroke-width="1.5" fill="none"/>
+          <!-- Left oar -->
+          <line x1="35" y1="42" x2="5" y2="62" stroke="#8B5E3C" stroke-width="3" stroke-linecap="round"/>
+          <ellipse cx="5" cy="64" rx="6" ry="3" fill="#8B5E3C" transform="rotate(-30 5 64)"/>
+          <!-- Right oar -->
+          <line x1="85" y1="42" x2="115" y2="62" stroke="#8B5E3C" stroke-width="3" stroke-linecap="round"/>
+          <ellipse cx="115" cy="64" rx="6" ry="3" fill="#8B5E3C" transform="rotate(30 115 64)"/>
+          <!-- Rower (simplified silhouette) -->
+          <!-- Body -->
+          <rect x="54" y="30" width="12" height="14" rx="4" fill="#0c2340"/>
+          <!-- Head -->
+          <circle cx="60" cy="25" r="6" fill="#0c2340"/>
+          <!-- Arms reaching forward -->
+          <path d="M54 36 Q45 32 38 35" stroke="#0c2340" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M66 36 Q75 32 82 35" stroke="#0c2340" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <h1>Rowing Stroke Tracker</h1>
+      <p>Log your daily stroke count</p>
+    </div>
+
+    <div class="date-badge" id="dateBadge">Loading date…</div>
+
+    <div class="config-notice" id="configNotice">
+      ⚠️ Apps Script URL not configured. See setup instructions.
+    </div>
+
+    <form id="scoreForm">
+      <label for="nameInput">Your Name</label>
+      <input
+        type="text"
+        id="nameInput"
+        name="name"
+        placeholder="e.g. Jon Wilde"
+        autocomplete="name"
+        required
+      />
+
+      <label for="strokeInput">Stroke Count</label>
+      <input
+        type="number"
+        id="strokeInput"
+        name="strokes"
+        placeholder="e.g. 5420"
+        min="1"
+        max="100000"
+        required
+      />
+
+      <button type="submit" id="submitBtn">Log Strokes</button>
+    </form>
+
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────────
+    // CONFIGURATION — paste your Apps Script Web App URL here
+    // ─────────────────────────────────────────────────────────────────
+    const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+    // ─────────────────────────────────────────────────────────────────
+
+    const form      = document.getElementById('scoreForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const msgBox    = document.getElementById('message');
+    const dateBadge = document.getElementById('dateBadge');
+    const notice    = document.getElementById('configNotice');
+
+    // Display today's date
+    const today = new Date();
+    const formatted = today.toLocaleDateString('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+    dateBadge.textContent = '📅 ' + formatted;
+
+    // Warn if URL not configured
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+      notice.style.display = 'block';
+    }
+
+    function showMessage(type, text) {
+      msgBox.className = 'message ' + type;
+      msgBox.textContent = text;
+      msgBox.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+        showMessage('error', 'Please configure the Apps Script URL first (see setup guide).');
+        return;
+      }
+
+      const name    = document.getElementById('nameInput').value.trim();
+      const strokes = parseInt(document.getElementById('strokeInput').value, 10);
+
+      if (!name) { showMessage('error', 'Please enter your name.'); return; }
+      if (isNaN(strokes) || strokes < 1) { showMessage('error', 'Please enter a valid stroke count.'); return; }
+
+      const dateStr = today.toLocaleDateString('en-GB', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      }); // e.g. 12/04/2026
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span>Saving…';
+      msgBox.style.display = 'none';
+
+      try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ name, strokes, date: dateStr })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showMessage('success', `🚣 Logged! ${name} — ${strokes.toLocaleString()} strokes on ${dateStr}`);
+          form.reset();
+        } else {
+          showMessage('error', 'Something went wrong: ' + (result.error || 'Unknown error'));
+        }
+      } catch (err) {
+        showMessage('error', 'Could not reach the server. Check your connection and URL.');
+        console.error(err);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Log Strokes';
+      }
+    });
+  </script>
+</body>
+</html>
