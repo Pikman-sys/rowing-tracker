@@ -12,9 +12,11 @@
       min-height: 100vh;
       background: linear-gradient(160deg, #0c2340 0%, #1a4a7a 50%, #0c2340 100%);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 32px 20px;
+      gap: 24px;
     }
 
     /* Subtle animated water ripple behind the card */
@@ -186,34 +188,107 @@
       text-align: center;
       display: none;
     }
+
+    /* ── Chart card ─────────────────────────────────────────────── */
+    .chart-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 36px 36px 32px;
+      width: 100%;
+      max-width: 720px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    .chart-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      border-radius: 20px 20px 0 0;
+      background: linear-gradient(90deg, #1a6fa8, #4db6e8, #1a6fa8);
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chart-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0c2340;
+    }
+
+    .chart-header p {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+
+    .chart-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 280px;
+      color: #9ca3af;
+      font-size: 14px;
+      gap: 10px;
+    }
+
+    .chart-loading .spinner {
+      border-color: rgba(26,111,168,0.3);
+      border-top-color: #1a6fa8;
+    }
+
+    .chart-empty {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      height: 280px;
+      color: #9ca3af;
+      font-size: 14px;
+      text-align: center;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .refresh-btn {
+      width: auto;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 20px;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
+
+  <!-- ── Entry form card (unchanged) ──────────────────────────── -->
   <div class="card">
     <div class="logo">
-      <!-- Rowing boat + oars SVG -->
       <div class="logo-icon">
         <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Water waves -->
           <path d="M0 58 Q15 52 30 58 Q45 64 60 58 Q75 52 90 58 Q105 64 120 58" stroke="#93c6e0" stroke-width="2" fill="none" opacity="0.6"/>
           <path d="M0 66 Q15 60 30 66 Q45 72 60 66 Q75 60 90 66 Q105 72 120 66" stroke="#93c6e0" stroke-width="2" fill="none" opacity="0.4"/>
-          <!-- Boat hull -->
           <path d="M20 54 Q60 68 100 54 L95 46 Q60 58 25 46 Z" fill="#1a4a7a"/>
           <path d="M25 46 Q60 58 95 46 L90 40 Q60 52 30 40 Z" fill="#1a6fa8"/>
-          <!-- Boat interior / gunwale highlight -->
           <path d="M30 40 Q60 50 90 40" stroke="#4db6e8" stroke-width="1.5" fill="none"/>
-          <!-- Left oar -->
           <line x1="35" y1="42" x2="5" y2="62" stroke="#8B5E3C" stroke-width="3" stroke-linecap="round"/>
           <ellipse cx="5" cy="64" rx="6" ry="3" fill="#8B5E3C" transform="rotate(-30 5 64)"/>
-          <!-- Right oar -->
           <line x1="85" y1="42" x2="115" y2="62" stroke="#8B5E3C" stroke-width="3" stroke-linecap="round"/>
           <ellipse cx="115" cy="64" rx="6" ry="3" fill="#8B5E3C" transform="rotate(30 115 64)"/>
-          <!-- Rower (simplified silhouette) -->
-          <!-- Body -->
           <rect x="54" y="30" width="12" height="14" rx="4" fill="#0c2340"/>
-          <!-- Head -->
           <circle cx="60" cy="25" r="6" fill="#0c2340"/>
-          <!-- Arms reaching forward -->
           <path d="M54 36 Q45 32 38 35" stroke="#0c2340" stroke-width="2.5" stroke-linecap="round" fill="none"/>
           <path d="M66 36 Q75 32 82 35" stroke="#0c2340" stroke-width="2.5" stroke-linecap="round" fill="none"/>
         </svg>
@@ -256,6 +331,32 @@
     <div class="message" id="message"></div>
   </div>
 
+  <!-- ── Chart card ────────────────────────────────────────────── -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <h2>📊 Stroke Count Over Time</h2>
+      <p id="chartUpdated"></p>
+    </div>
+
+    <div id="chartLoading" class="chart-loading">
+      <span class="spinner"></span> Loading chart data…
+    </div>
+
+    <div id="chartEmpty" class="chart-empty">
+      <span style="font-size:32px">🚣</span>
+      No data yet — log the first stroke count above!
+    </div>
+
+    <div class="chart-wrap" id="chartWrap" style="display:none">
+      <canvas id="strokeChart"></canvas>
+    </div>
+
+    <button class="refresh-btn" id="refreshBtn" onclick="loadChart()" style="display:none">
+      ↻ Refresh chart
+    </button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script>
     // ─────────────────────────────────────────────────────────────────
     // CONFIGURATION — paste your Apps Script Web App URL here
@@ -263,11 +364,17 @@
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz65grfTnJVLNDzCbbDmwlr--KbS-NYpTavtjQNnjch3aHahHJYDksChUTbufsFHR_S8A/exec';
     // ─────────────────────────────────────────────────────────────────
 
-    const form      = document.getElementById('scoreForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const msgBox    = document.getElementById('message');
-    const dateBadge = document.getElementById('dateBadge');
-    const notice    = document.getElementById('configNotice');
+    // Colour palette for rowers (cycles if more than 7)
+    const PALETTE = [
+      '#1a6fa8', '#e85d04', '#2ec4b6', '#9b5de5',
+      '#f72585', '#06d6a0', '#ffd166'
+    ];
+
+    const form       = document.getElementById('scoreForm');
+    const submitBtn  = document.getElementById('submitBtn');
+    const msgBox     = document.getElementById('message');
+    const dateBadge  = document.getElementById('dateBadge');
+    const notice     = document.getElementById('configNotice');
 
     // Display today's date
     const today = new Date();
@@ -276,7 +383,6 @@
     });
     dateBadge.textContent = '📅 ' + formatted;
 
-    // Warn if URL not configured
     if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
       notice.style.display = 'block';
     }
@@ -287,11 +393,12 @@
       msgBox.style.display = 'block';
     }
 
+    // ── Form submission ───────────────────────────────────────────
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
-        showMessage('error', 'Please configure the Apps Script URL first (see setup guide).');
+        showMessage('error', 'Please configure the Apps Script URL first.');
         return;
       }
 
@@ -303,7 +410,7 @@
 
       const dateStr = today.toLocaleDateString('en-GB', {
         day: '2-digit', month: '2-digit', year: 'numeric'
-      }); // e.g. 12/04/2026
+      });
 
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<span class="spinner"></span>Saving…';
@@ -321,6 +428,8 @@
         if (result.success) {
           showMessage('success', `🚣 Logged! ${name} — ${strokes.toLocaleString()} strokes on ${dateStr}`);
           form.reset();
+          // Reload the chart after a short delay so the sheet has time to update
+          setTimeout(loadChart, 1200);
         } else {
           showMessage('error', 'Something went wrong: ' + (result.error || 'Unknown error'));
         }
@@ -332,6 +441,115 @@
         submitBtn.innerHTML = 'Log Strokes';
       }
     });
+
+    // ── Chart ─────────────────────────────────────────────────────
+    let chartInstance = null;
+
+    async function loadChart() {
+      if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
+
+      document.getElementById('chartLoading').style.display = 'flex';
+      document.getElementById('chartWrap').style.display    = 'none';
+      document.getElementById('chartEmpty').style.display   = 'none';
+      document.getElementById('refreshBtn').style.display   = 'none';
+      document.getElementById('chartUpdated').textContent   = '';
+
+      try {
+        const res  = await fetch(APPS_SCRIPT_URL);
+        const data = await res.json();
+
+        document.getElementById('chartLoading').style.display = 'none';
+
+        if (!data.dates || data.dates.length === 0 || !data.rowers || data.rowers.length === 0) {
+          document.getElementById('chartEmpty').style.display = 'flex';
+          return;
+        }
+
+        // Build datasets
+        const datasets = data.rowers.map((rower, i) => {
+          const colour = PALETTE[i % PALETTE.length];
+          return {
+            label: rower.name,
+            data: rower.strokes,
+            borderColor: colour,
+            backgroundColor: colour + '22',
+            pointBackgroundColor: colour,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 2.5,
+            tension: 0.3,
+            spanGaps: true   // connects across missing days
+          };
+        });
+
+        document.getElementById('chartWrap').style.display  = 'block';
+        document.getElementById('refreshBtn').style.display = 'inline-block';
+
+        const now = new Date();
+        document.getElementById('chartUpdated').textContent =
+          'Updated ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+        // Destroy previous instance if refreshing
+        if (chartInstance) { chartInstance.destroy(); }
+
+        chartInstance = new Chart(
+          document.getElementById('strokeChart'),
+          {
+            type: 'line',
+            data: { labels: data.dates, datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    padding: 20,
+                    font: { size: 12, family: "'Segoe UI', system-ui, sans-serif" }
+                  }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: ctx => {
+                      const v = ctx.parsed.y;
+                      return v === null ? null : ` ${ctx.dataset.label}: ${v.toLocaleString()} strokes`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { color: 'rgba(0,0,0,0.04)' },
+                  ticks: { font: { size: 11 }, color: '#6b7280' }
+                },
+                y: {
+                  beginAtZero: false,
+                  grid: { color: 'rgba(0,0,0,0.06)' },
+                  ticks: {
+                    font: { size: 11 },
+                    color: '#6b7280',
+                    callback: v => v.toLocaleString()
+                  }
+                }
+              }
+            }
+          }
+        );
+
+      } catch (err) {
+        document.getElementById('chartLoading').style.display = 'none';
+        document.getElementById('chartEmpty').style.display   = 'flex';
+        document.getElementById('chartEmpty').innerHTML =
+          '<span style="font-size:28px">⚠️</span>Could not load chart data.';
+        console.error(err);
+      }
+    }
+
+    // Load chart on page open
+    loadChart();
   </script>
 </body>
 </html>
