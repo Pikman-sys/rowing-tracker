@@ -420,7 +420,7 @@
         const response = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ name, strokes, date: dateStr })
+          body: JSON.stringify({ action: 'saveScore', name, strokes, date: dateStr })
         });
 
         const result = await response.json();
@@ -455,7 +455,11 @@
       document.getElementById('chartUpdated').textContent   = '';
 
       try {
-        const res  = await fetch(APPS_SCRIPT_URL);
+        const res  = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ action: 'getData' })
+        });
         const data = await res.json();
 
         document.getElementById('chartLoading').style.display = 'none';
