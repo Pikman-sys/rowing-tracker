@@ -142,27 +142,56 @@
     button:active { transform: scale(0.98); }
     button:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
 
-    .message {
-      margin-top: 18px;
-      border-radius: 10px;
-      padding: 13px 16px;
+    /* ── Toast ────────────────────────────────────────────────── */
+    .toast-wrap {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+      width: min(400px, 90vw);
+    }
+    .toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 12px;
       font-size: 14px;
       font-weight: 500;
-      text-align: center;
-      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      pointer-events: all;
+      animation: toastIn 0.3s ease forwards;
     }
+    .toast.out { animation: toastOut 0.3s ease forwards; }
+    .toast.success { background: #0c3d5e; color: #fff; border-left: 4px solid #4db6e8; }
+    .toast.error   { background: #7f1d1d; color: #fff; border-left: 4px solid #f87171; }
+    .toast-msg  { flex: 1; line-height: 1.5; }
+    .toast-close {
+      background: none; border: none; color: rgba(255,255,255,0.6);
+      cursor: pointer; font-size: 16px; padding: 0; width: auto; flex-shrink: 0;
+    }
+    .toast-close:hover { color: #fff; background: none; }
+    @keyframes toastIn  { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes toastOut { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(-16px); } }
 
-    .message.success {
-      background: #eff8ff;
-      border: 1px solid #93c6e0;
-      color: #0c3d5e;
+    /* ── Leaderboard ───────────────────────────────────────────── */
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 4px;
+      border-bottom: 1px solid #f3f4f6;
     }
-
-    .message.error {
-      background: #fef2f2;
-      border: 1px solid #fca5a5;
-      color: #991b1b;
-    }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-rank  { font-size: 22px; width: 30px; text-align: center; flex-shrink: 0; }
+    .lb-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .lb-name  { flex: 1; font-weight: 600; color: #0c2340; font-size: 15px; }
+    .lb-total { font-size: 13px; color: #6b7280; font-weight: 500; white-space: nowrap; }
 
     .spinner {
       display: inline-block;
@@ -274,7 +303,10 @@
 </head>
 <body>
 
-  <!-- ── Entry form card (unchanged) ──────────────────────────── -->
+  <!-- ── Toast container ───────────────────────────────────────── -->
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <!-- ── Entry form card ───────────────────────────────────────── -->
   <div class="card">
     <div class="logo">
       <img src="logo.png" alt="Portishead PGC" class="logo-img" />
@@ -315,8 +347,15 @@
 
       <button type="submit" id="submitBtn">Log Strokes</button>
     </form>
+  </div>
 
-    <div class="message" id="message"></div>
+  <!-- ── Leaderboard card ──────────────────────────────────────── -->
+  <div class="chart-card" id="leaderboardCard" style="display:none">
+    <div class="chart-header">
+      <h2>🏆 Leaderboard</h2>
+      <p id="lbUpdated"></p>
+    </div>
+    <div id="leaderboardList"></div>
   </div>
 
   <!-- ── Chart card ────────────────────────────────────────────── -->
@@ -364,11 +403,10 @@
       '#f72585', '#06d6a0', '#ffd166'
     ];
 
-    const form       = document.getElementById('scoreForm');
-    const submitBtn  = document.getElementById('submitBtn');
-    const msgBox     = document.getElementById('message');
-    const dateBadge  = document.getElementById('dateBadge');
-    const notice     = document.getElementById('configNotice');
+    const form      = document.getElementById('scoreForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const dateBadge = document.getElementById('dateBadge');
+    const notice    = document.getElementById('configNotice');
 
     // Initialise date picker to today
     const today = new Date();
@@ -378,7 +416,7 @@
     function updateBadge() {
       const [y, m, d] = dateInput.value.split('-');
       const picked = new Date(y, m - 1, d);
-      dateBadge.textContent = "Today's date: " + picked.toLocaleDateString('en-GB', {
+      dateBadge.textContent = "📅 Today's date: " + picked.toLocaleDateString('en-GB', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
       });
     }
@@ -389,10 +427,16 @@
       notice.style.display = 'block';
     }
 
-    function showMessage(type, text) {
-      msgBox.className = 'message ' + type;
-      msgBox.textContent = text;
-      msgBox.style.display = 'block';
+    function showToast(type, text) {
+      const wrap  = document.getElementById('toastWrap');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<span class="toast-msg">${text}</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>`;
+      wrap.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('out');
+        toast.addEventListener('animationend', () => toast.remove(), { once: true });
+      }, 4000);
     }
 
     // ── Form submission ───────────────────────────────────────────
@@ -400,40 +444,68 @@
       e.preventDefault();
 
       if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
-        showMessage('error', 'Please configure the Apps Script URL first.');
+        showToast('error', 'Please configure the Apps Script URL first.');
         return;
       }
 
       const name    = document.getElementById('nameInput').value.trim();
       const strokes = parseInt(document.getElementById('strokeInput').value, 10);
 
-      if (!name) { showMessage('error', 'Please enter your name.'); return; }
-      if (isNaN(strokes) || strokes < 1) { showMessage('error', 'Please enter a valid stroke count.'); return; }
+      if (!name) { showToast('error', 'Please enter your name.'); return; }
+      if (isNaN(strokes) || strokes < 1) { showToast('error', 'Please enter a valid stroke count.'); return; }
 
       const [y, m, d] = dateInput.value.split('-');
       const dateStr = `${d}/${m}/${y}`; // DD/MM/YYYY
 
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<span class="spinner"></span>Saving…';
-      msgBox.style.display = 'none';
 
       try {
         // GET + no-cors: query params survive Google's redirect (POST body doesn't).
         const params = new URLSearchParams({ action: 'saveScore', name, strokes, date: dateStr });
         await fetch(`${APPS_SCRIPT_URL}?${params}`, { method: 'GET', mode: 'no-cors' });
 
-        showMessage('success', `🚣 Logged! ${name} — ${strokes.toLocaleString()} strokes on ${dateStr}`);
+        showToast('success', `🚣 Logged! ${name} — ${strokes.toLocaleString()} strokes on ${dateStr}`);
         form.reset();
         // Reload chart after a short delay so the sheet has time to update
         setTimeout(loadChart, 2500);
       } catch (err) {
-        showMessage('error', 'Could not reach the server. Check your connection and URL.');
+        showToast('error', 'Could not reach the server. Check your connection and URL.');
         console.error(err);
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Log Strokes';
       }
     });
+
+    // ── Leaderboard ───────────────────────────────────────────────
+    function renderLeaderboard(rowers) {
+      const card = document.getElementById('leaderboardCard');
+      const list = document.getElementById('leaderboardList');
+      if (!rowers || rowers.length === 0) { card.style.display = 'none'; return; }
+
+      // Sort by latest cumulative total (last non-null value in strokes)
+      const medals = ['🥇', '🥈', '🥉'];
+      const ranked = rowers
+        .map((r, i) => ({
+          name:   r.name,
+          total:  [...r.strokes].reverse().find(v => v !== null) ?? 0,
+          colour: PALETTE[i % PALETTE.length]
+        }))
+        .sort((a, b) => b.total - a.total);
+
+      list.innerHTML = ranked.map((r, i) => `
+        <div class="lb-row">
+          <span class="lb-rank">${medals[i] ?? i + 1}</span>
+          <span class="lb-dot" style="background:${r.colour}"></span>
+          <span class="lb-name">${r.name}</span>
+          <span class="lb-total">${r.total.toLocaleString()} strokes</span>
+        </div>`).join('');
+
+      document.getElementById('lbUpdated').textContent =
+        new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      card.style.display = 'block';
+    }
 
     // ── Chart ─────────────────────────────────────────────────────
     let chartInstance = null;
@@ -496,6 +568,7 @@
 
         const data = { dates, rowers };
 
+        renderLeaderboard(rowers);
         document.getElementById('chartLoading').style.display = 'none';
 
         if (!data.dates || data.dates.length === 0 || !data.rowers || data.rowers.length === 0) {
