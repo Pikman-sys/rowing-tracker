@@ -206,6 +206,27 @@
     }
     .lb-grand-total span:last-child { color: #1a6fa8; font-size: 18px; }
 
+    /* ── Skeleton shimmer ──────────────────────────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position:  400px 0; }
+    }
+    .skel {
+      background: linear-gradient(90deg, #e8edf2 25%, #d0d9e3 50%, #e8edf2 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite linear;
+      border-radius: 6px;
+    }
+    .skel-grand {
+      height: 20px;
+      width: 110px;
+      display: inline-block;
+    }
+    .skel-rank  { width: 26px;  height: 26px; border-radius: 50%; display: inline-block; }
+    .skel-dot   { width: 10px;  height: 10px; border-radius: 50%; display: inline-block; }
+    .skel-name  { height: 14px; flex: 1; border-radius: 6px; }
+    .skel-score { height: 14px; width: 80px;  border-radius: 6px; }
+
     .spinner {
       display: inline-block;
       width: 16px;
@@ -364,16 +385,21 @@
   </div>
 
   <!-- ── Leaderboard card ──────────────────────────────────────── -->
-  <div class="chart-card" id="leaderboardCard" style="display:none">
+  <div class="chart-card" id="leaderboardCard">
     <div class="chart-header">
       <h2>🏆 Leaderboard</h2>
       <p id="lbUpdated"></p>
     </div>
     <div class="lb-grand-total">
       <span>🚣 Combined total</span>
-      <span id="lbGrandTotal">—</span>
+      <span id="lbGrandTotal"><span class="skel skel-grand"></span></span>
     </div>
-    <div id="leaderboardList"></div>
+    <div id="leaderboardList">
+      <!-- Skeleton rows shown while data loads -->
+      <div class="lb-row"><span class="skel skel-rank lb-rank"></span><span class="skel skel-dot lb-dot" style="margin-left:12px"></span><span class="skel skel-name" style="margin-left:12px;flex:1"></span><span class="skel skel-score" style="margin-left:12px"></span></div>
+      <div class="lb-row"><span class="skel skel-rank lb-rank"></span><span class="skel skel-dot lb-dot" style="margin-left:12px"></span><span class="skel skel-name" style="margin-left:12px;flex:1"></span><span class="skel skel-score" style="margin-left:12px"></span></div>
+      <div class="lb-row"><span class="skel skel-rank lb-rank"></span><span class="skel skel-dot lb-dot" style="margin-left:12px"></span><span class="skel skel-name" style="margin-left:12px;flex:1"></span><span class="skel skel-score" style="margin-left:12px"></span></div>
+    </div>
   </div>
 
   <!-- ── Chart card ────────────────────────────────────────────── -->
@@ -434,7 +460,7 @@
     function updateBadge() {
       const [y, m, d] = dateInput.value.split('-');
       const picked = new Date(y, m - 1, d);
-      dateBadge.textContent = "Today's date: " + picked.toLocaleDateString('en-GB', {
+      dateBadge.textContent = "📅 Today's date: " + picked.toLocaleDateString('en-GB', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
       });
     }
@@ -498,9 +524,13 @@
 
     // ── Leaderboard ───────────────────────────────────────────────
     function renderLeaderboard(rowers) {
-      const card = document.getElementById('leaderboardCard');
       const list = document.getElementById('leaderboardList');
-      if (!rowers || rowers.length === 0) { card.style.display = 'none'; return; }
+
+      if (!rowers || rowers.length === 0) {
+        list.innerHTML = '<p style="color:#9ca3af;font-size:14px;text-align:center;padding:16px 0">No data yet — log the first stroke count above!</p>';
+        document.getElementById('lbGrandTotal').textContent = '—';
+        return;
+      }
 
       // Sort by latest cumulative total (last non-null value in strokes)
       const medals = ['🥇', '🥈', '🥉'];
@@ -524,7 +554,6 @@
       document.getElementById('lbGrandTotal').textContent = grandTotal.toLocaleString() + ' strokes';
       document.getElementById('lbUpdated').textContent =
         new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      card.style.display = 'block';
     }
 
     // ── Chart ─────────────────────────────────────────────────────
