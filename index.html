@@ -55,16 +55,11 @@
       margin-bottom: 32px;
     }
 
-    /* Rowing boat SVG icon */
-    .logo-icon {
+    .logo-img {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
       margin-bottom: 14px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .logo-icon svg {
-      width: 72px;
-      height: 48px;
     }
 
     .logo h1 {
@@ -276,23 +271,7 @@
   <!-- ── Entry form card (unchanged) ──────────────────────────── -->
   <div class="card">
     <div class="logo">
-      <div class="logo-icon">
-        <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0 58 Q15 52 30 58 Q45 64 60 58 Q75 52 90 58 Q105 64 120 58" stroke="#93c6e0" stroke-width="2" fill="none" opacity="0.6"/>
-          <path d="M0 66 Q15 60 30 66 Q45 72 60 66 Q75 60 90 66 Q105 72 120 66" stroke="#93c6e0" stroke-width="2" fill="none" opacity="0.4"/>
-          <path d="M20 54 Q60 68 100 54 L95 46 Q60 58 25 46 Z" fill="#1a4a7a"/>
-          <path d="M25 46 Q60 58 95 46 L90 40 Q60 52 30 40 Z" fill="#1a6fa8"/>
-          <path d="M30 40 Q60 50 90 40" stroke="#4db6e8" stroke-width="1.5" fill="none"/>
-          <line x1="35" y1="42" x2="5" y2="62" stroke="#8B5E3C" stroke-width="3" stroke-linecap="round"/>
-          <ellipse cx="5" cy="64" rx="6" ry="3" fill="#8B5E3C" transform="rotate(-30 5 64)"/>
-          <line x1="85" y1="42" x2="115" y2="62" stroke="#8B5E3C" stroke-width="3" stroke-linecap="round"/>
-          <ellipse cx="115" cy="64" rx="6" ry="3" fill="#8B5E3C" transform="rotate(30 115 64)"/>
-          <rect x="54" y="30" width="12" height="14" rx="4" fill="#0c2340"/>
-          <circle cx="60" cy="25" r="6" fill="#0c2340"/>
-          <path d="M54 36 Q45 32 38 35" stroke="#0c2340" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-          <path d="M66 36 Q75 32 82 35" stroke="#0c2340" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-        </svg>
-      </div>
+      <img src="logo.png" alt="Portishead PGC" class="logo-img" />
       <h1>Rowing Stroke Tracker</h1>
       <p>Log your daily stroke count</p>
     </div>
@@ -418,14 +397,9 @@
       msgBox.style.display = 'none';
 
       try {
-        // no-cors: the write reaches Apps Script fine; we just can't read
-        // the response back (browser blocks it due to Google's redirect).
-        await fetch(APPS_SCRIPT_URL, {
-          method:  'POST',
-          mode:    'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body:    JSON.stringify({ action: 'saveScore', name, strokes, date: dateStr })
-        });
+        // GET + no-cors: query params survive Google's redirect (POST body doesn't).
+        const params = new URLSearchParams({ action: 'saveScore', name, strokes, date: dateStr });
+        await fetch(`${APPS_SCRIPT_URL}?${params}`, { method: 'GET', mode: 'no-cors' });
 
         showMessage('success', `🚣 Logged! ${name} — ${strokes.toLocaleString()} strokes on ${dateStr}`);
         form.reset();
