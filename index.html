@@ -85,7 +85,12 @@
       color: #1a4a7a;
       font-weight: 600;
       text-align: center;
-      margin-bottom: 28px;
+      margin-bottom: 10px;
+    }
+
+    input[type="date"] {
+      margin-bottom: 20px;
+      cursor: pointer;
     }
 
     label {
@@ -284,6 +289,9 @@
     </div>
 
     <form id="scoreForm">
+      <label for="dateInput">Date</label>
+      <input type="date" id="dateInput" name="date" />
+
       <label for="nameInput">Your Name</label>
       <input
         type="text"
@@ -357,12 +365,20 @@
     const dateBadge  = document.getElementById('dateBadge');
     const notice     = document.getElementById('configNotice');
 
-    // Display today's date
+    // Initialise date picker to today
     const today = new Date();
-    const formatted = today.toLocaleDateString('en-GB', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-    });
-    dateBadge.textContent = '📅 ' + formatted;
+    const dateInput = document.getElementById('dateInput');
+    dateInput.value = today.toISOString().split('T')[0]; // YYYY-MM-DD for the input
+
+    function updateBadge() {
+      const [y, m, d] = dateInput.value.split('-');
+      const picked = new Date(y, m - 1, d);
+      dateBadge.textContent = '📅 ' + picked.toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      });
+    }
+    updateBadge();
+    dateInput.addEventListener('change', updateBadge);
 
     if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
       notice.style.display = 'block';
@@ -389,9 +405,8 @@
       if (!name) { showMessage('error', 'Please enter your name.'); return; }
       if (isNaN(strokes) || strokes < 1) { showMessage('error', 'Please enter a valid stroke count.'); return; }
 
-      const dateStr = today.toLocaleDateString('en-GB', {
-        day: '2-digit', month: '2-digit', year: 'numeric'
-      });
+      const [y, m, d] = dateInput.value.split('-');
+      const dateStr = `${d}/${m}/${y}`; // DD/MM/YYYY
 
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<span class="spinner"></span>Saving…';
