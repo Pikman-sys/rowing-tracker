@@ -433,7 +433,7 @@
     function updateBadge() {
       const [y, m, d] = dateInput.value.split('-');
       const picked = new Date(y, m - 1, d);
-      dateBadge.textContent = "📅 Today's date: " + picked.toLocaleDateString('en-GB', {
+      dateBadge.textContent = "Today's date: " + picked.toLocaleDateString('en-GB', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
       });
     }
