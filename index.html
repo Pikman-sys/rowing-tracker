@@ -359,9 +359,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script>
     // ─────────────────────────────────────────────────────────────────
-    // CONFIGURATION — paste your Apps Script Web App URL here
+    // CONFIGURATION
     // ─────────────────────────────────────────────────────────────────
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8lCxxJcOrqYVg4ZMVvgfeMjG8_lWf8czxCvCedEkEB46farjbuQP0NHYZm_nmdtZ3hA/exec';
+    const SHEET_ID        = '17Pk8Da9cpYCF9zkm9UbiLkTTAs70f7vxmre5JqAKvZM';
     // ─────────────────────────────────────────────────────────────────
 
     // Colour palette for rowers (cycles if more than 7)
@@ -417,22 +418,19 @@
       msgBox.style.display = 'none';
 
       try {
-        const response = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
+        // no-cors: the write reaches Apps Script fine; we just can't read
+        // the response back (browser blocks it due to Google's redirect).
+        await fetch(APPS_SCRIPT_URL, {
+          method:  'POST',
+          mode:    'no-cors',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'saveScore', name, strokes, date: dateStr })
+          body:    JSON.stringify({ action: 'saveScore', name, strokes, date: dateStr })
         });
 
-        const result = await response.json();
-
-        if (result.success) {
-          showMessage('success', `🚣 Logged! ${name} — ${strokes.toLocaleString()} strokes on ${dateStr}`);
-          form.reset();
-          // Reload the chart after a short delay so the sheet has time to update
-          setTimeout(loadChart, 1200);
-        } else {
-          showMessage('error', 'Something went wrong: ' + (result.error || 'Unknown error'));
-        }
+        showMessage('success', `🚣 Logged! ${name} — ${strokes.toLocaleString()} strokes on ${dateStr}`);
+        form.reset();
+        // Reload chart after a short delay so the sheet has time to update
+        setTimeout(loadChart, 2500);
       } catch (err) {
         showMessage('error', 'Could not reach the server. Check your connection and URL.');
         console.error(err);
@@ -445,9 +443,22 @@
     // ── Chart ─────────────────────────────────────────────────────
     let chartInstance = null;
 
-    async function loadChart() {
-      if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
+    // Simple CSV parser that handles quoted fields
+    function parseCSV(text) {
+      return text.trim().split('\n').map(line => {
+        const row = []; let cell = ''; let inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') { inQuote = !inQuote; }
+          else if (ch === ',' && !inQuote) { row.push(cell.trim()); cell = ''; }
+          else { cell += ch; }
+        }
+        row.push(cell.trim());
+        return row;
+      });
+    }
 
+    async function loadChart() {
       document.getElementById('chartLoading').style.display = 'flex';
       document.getElementById('chartWrap').style.display    = 'none';
       document.getElementById('chartEmpty').style.display   = 'none';
@@ -455,12 +466,31 @@
       document.getElementById('chartUpdated').textContent   = '';
 
       try {
-        const res  = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: 'getData' })
-        });
-        const data = await res.json();
+        // Fetch the sheet directly as CSV — no Apps Script, no CORS issues.
+        // Requires the spreadsheet to be shared as "Anyone with link can view".
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+        const res    = await fetch(csvUrl);
+        if (!res.ok) throw new Error('Sheet not publicly accessible');
+        const rows = parseCSV(await res.text());
+
+        // Convert CSV rows into the same {dates, rowers} shape as before
+        if (rows.length < 2 || rows[0].length < 2) {
+          document.getElementById('chartLoading').style.display = 'none';
+          document.getElementById('chartEmpty').style.display   = 'flex';
+          return;
+        }
+        const headers = rows[0];
+        const dates   = headers.slice(1).filter(d => d);
+        const rowers  = rows.slice(1)
+          .filter(r => r[0])
+          .map(r => ({
+            name:    r[0],
+            strokes: r.slice(1, dates.length + 1).map(v => {
+              const n = parseFloat(v); return isNaN(n) ? null : n;
+            })
+          }));
+
+        const data = { dates, rowers };
 
         document.getElementById('chartLoading').style.display = 'none';
 
