@@ -464,6 +464,15 @@
             })
           }));
 
+        // Accumulate each rower's strokes over time
+        rowers.forEach(rower => {
+          let total = 0, started = false;
+          rower.strokes = rower.strokes.map(v => {
+            if (v !== null) { total += v; started = true; }
+            return started ? total : null;
+          });
+        });
+
         const data = { dates, rowers };
 
         document.getElementById('chartLoading').style.display = 'none';
