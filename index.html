@@ -312,6 +312,22 @@
       margin-top: 20px;
       border-radius: 8px;
     }
+
+    /* ── Card entrance animations ───────────────────────────────── */
+    @keyframes cardEnter {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card, .chart-card {
+      opacity: 0;
+      animation: cardEnter 0.5s ease-out forwards;
+    }
+
+    /* body child 1 = toast wrap (invisible), 2 = form, 3 = leaderboard, 4 = chart */
+    body > *:nth-child(2) { animation-delay: 0.1s; }
+    body > *:nth-child(3) { animation-delay: 0.25s; }
+    body > *:nth-child(4) { animation-delay: 0.4s; }
   </style>
 </head>
 <body>
@@ -433,7 +449,7 @@
     function updateBadge() {
       const [y, m, d] = dateInput.value.split('-');
       const picked = new Date(y, m - 1, d);
-      dateBadge.textContent = "Today's date: " + picked.toLocaleDateString('en-GB', {
+      dateBadge.textContent = "📅 Today's date: " + picked.toLocaleDateString('en-GB', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
       });
     }
